@@ -18,25 +18,32 @@ func main() {
 
 	channelId := os.Getenv("SLACK_CHANNEL_ID")
 
-
-
 	api := slack.New(bot_token)
-	channelArr := []string{channelId}
 	fileArr := []string{"dataset.pdf"}
 
-	for i :=0; i<len(fileArr); i++ {
-		params := slack.FileUploadParameters{
-			Channels: channelArr,
-			File: fileArr[i],
+	for _, file := range fileArr {
+		fileData, err := os.Open(file)
+		fileInfo, _ := fileData.Stat()
+		params := slack.UploadFileV2Parameters{
+			Channel: channelId,
+			Filename: fileData.Name(),
+			FileSize: int(fileInfo.Size()),
+			File: file,
 		}
-		file, err := api.UploadFile(params)
 
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			return
+			fmt.Printf("Error while opening file: %v\n", err)
+			continue
 		}
+		defer fileData.Close()
 
-		fmt.Printf("file - %s, URL:%s\n", file.Name, file.URL)
+		uploadRes, err := api.UploadFileV2(params)
 
+		if err != nil {
+			fmt.Printf("Error uploading file: %v\n", err)
+			continue
+		}
+		
+		fmt.Printf("File - %s uploaded", uploadRes.Title)
 	}
 }
